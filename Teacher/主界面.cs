@@ -62,8 +62,9 @@ namespace Teacher
             selectTeam(); //显示对应年级专业所有队伍信息
             teamVol();
             setLabel();
-
             personinFormation();//个人信息显示
+
+            label13.Text = "当前用户：" + Model.login.Name;
 
         }
         private void data_design()//浏览小组里表格的属性设计
@@ -76,12 +77,7 @@ namespace Teacher
             dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;//整行选中
 
         }
-        private void label12_Click(object sender, EventArgs e)//返回登录界面
-        {
-            System.Threading.Thread t2 = new System.Threading.Thread(new System.Threading.ThreadStart(() => Application.Run(new 登陆界面())));
-            t2.Start();
-            this.Close();
-        }
+
 
         private void label17_Click(object sender, EventArgs e)//浏览小组返回主界面
         {
@@ -585,6 +581,14 @@ namespace Teacher
             Form f1 = new 队伍信息(currentrow);
             f1.ShowDialog();
         }
+
+        private void button5_Click_1(object sender, EventArgs e)
+        {
+            System.Threading.Thread t2 = new System.Threading.Thread(new System.Threading.ThreadStart(() => Application.Run(new 登陆界面())));
+            t2.Start();
+            this.Close();
+        }
+
 
 
 

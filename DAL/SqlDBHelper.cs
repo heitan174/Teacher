@@ -7,6 +7,8 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Configuration;
 using System.Transactions;
+using System.Reflection;
+using System.Collections;
 
 namespace DAL
 {
@@ -270,6 +272,90 @@ namespace DAL
                 res = true;
             }
             return res;
+        }
+        private static void PrepareCommand(SqlCommand cmd, SqlConnection conn, SqlTransaction trans, string cmdText, SqlParameter[] cmdParms)
+        {
+            if (conn.State != ConnectionState.Open)
+                conn.Open();
+            cmd.Connection = conn;
+            cmd.CommandText = cmdText;
+            if (trans != null)
+                cmd.Transaction = trans;    //指定SqlCommand类的事务
+            cmd.CommandType = CommandType.Text;//指定sqlcommand类的CommandText属性的解释类型
+            if (cmdParms != null)//如果插入的参数不为空，则foreach循环遍历加入到SqlCommand类的参数属性中
+            {
+                foreach (SqlParameter parameter in cmdParms)
+                {
+                    if ((parameter.Direction == ParameterDirection.InputOutput || parameter.Direction == ParameterDirection.Input) &&
+                        (parameter.Value == null))
+                    {
+                        parameter.Value = DBNull.Value;
+                    }
+                    cmd.Parameters.Add(parameter);
+                }
+            }
+        }
+
+        public static void ExecuteSqlTran(Hashtable SQLStringList)
+        {
+            using (SqlConnection conn = new SqlConnection(connString))
+            {
+                conn.Open();
+                using (SqlTransaction trans = conn.BeginTransaction())
+                {
+                    SqlCommand cmd = new SqlCommand();
+                    try
+                    {
+                        //循环
+                        foreach (DictionaryEntry myDE in SQLStringList)
+                        {
+                            string cmdText = myDE.Key.ToString();
+                            SqlParameter[] cmdParms = (SqlParameter[])myDE.Value;
+                            PrepareCommand(cmd, conn, trans, cmdText, cmdParms);
+                            int val = cmd.ExecuteNonQuery();
+                            cmd.Parameters.Clear();
+                        }
+                        trans.Commit();
+                    }
+                    catch
+                    {
+                        trans.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public static List<T> DataTableToList<T>(DataTable dt) where T : new()
+        {
+            // 定义集合
+            List<T> ts = new List<T>();
+
+            string tempName = "";
+            T t = new T();
+            PropertyInfo[] propertys = t.GetType().GetProperties();
+
+            foreach (DataRow dr in dt.Rows)
+            {
+                t = new T();
+
+                foreach (PropertyInfo pi in propertys)
+                {
+                    tempName = pi.Name; // 检查DataTable是否包含此列
+
+                    if (dt.Columns.Contains(tempName))
+                    {
+                        // 判断此属性是否有Setter
+                        if (!pi.CanWrite) continue;
+
+                        object value = dr[tempName];
+                        if (value != DBNull.Value)
+                            pi.SetValue(t, value, null);
+                    }
+                }
+                ts.Add(t);
+            }
+            return ts;
         }
     }
 }
